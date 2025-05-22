@@ -17,7 +17,9 @@ foreach(file IN LISTS shader_files)
 endforeach()
 
 set(classes
+  F3DUtils
   vtkF3DFaceVaryingPointDispatcher
+  vtkF3DGLTFImporter
   vtkF3DImporter
   )
 

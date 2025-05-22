@@ -5,14 +5,112 @@
 
 #include <vtkCamera.h>
 #include <vtkMath.h>
+#include <vtkNew.h>
 #include <vtkObjectFactory.h>
 #include <vtkRenderWindow.h>
 #include <vtkRenderWindowInteractor.h>
 #include <vtkRendererCollection.h>
 #include <vtkSkybox.h>
 #include <vtkStringArray.h>
+#include <vtkTransform.h>
 
 vtkStandardNewMacro(vtkF3DInteractorStyle);
+
+//------------------------------------------------------------------------------
+void vtkF3DInteractorStyle::OnLeftButtonDown()
+{
+  this->FindPokedRenderer(
+    this->Interactor->GetEventPosition()[0], this->Interactor->GetEventPosition()[1]);
+  assert(this->CurrentRenderer != nullptr);
+
+  if (this->Interactor->GetShiftKey())
+  {
+    this->StartPan();
+  }
+  else
+  {
+    if (this->Interactor->GetControlKey())
+    {
+      this->StartSpin();
+    }
+    else
+    {
+      this->StartRotate();
+    }
+  }
+}
+
+//------------------------------------------------------------------------------
+void vtkF3DInteractorStyle::OnLeftButtonUp()
+{
+  switch (this->State)
+  {
+    case VTKIS_PAN:
+      this->EndPan();
+      break;
+
+    case VTKIS_SPIN:
+      this->EndSpin();
+      break;
+
+    case VTKIS_ROTATE:
+      this->EndRotate();
+      break;
+  }
+}
+
+//------------------------------------------------------------------------------
+void vtkF3DInteractorStyle::OnMiddleButtonDown()
+{
+  this->FindPokedRenderer(
+    this->Interactor->GetEventPosition()[0], this->Interactor->GetEventPosition()[1]);
+  assert(this->CurrentRenderer != nullptr);
+
+  this->StartPan();
+}
+
+//------------------------------------------------------------------------------
+void vtkF3DInteractorStyle::OnMiddleButtonUp()
+{
+  switch (this->State)
+  {
+    case VTKIS_PAN:
+      this->EndPan();
+      break;
+  }
+}
+
+//------------------------------------------------------------------------------
+void vtkF3DInteractorStyle::OnRightButtonDown()
+{
+  this->FindPokedRenderer(
+    this->Interactor->GetEventPosition()[0], this->Interactor->GetEventPosition()[1]);
+  assert(this->CurrentRenderer != nullptr);
+
+  if (this->Interactor->GetShiftKey())
+  {
+    this->StartEnvRotate();
+  }
+  else
+  {
+    this->StartDolly();
+  }
+}
+
+//------------------------------------------------------------------------------
+void vtkF3DInteractorStyle::OnRightButtonUp()
+{
+  switch (this->State)
+  {
+    case VTKIS_ENV_ROTATE:
+      this->EndEnvRotate();
+      break;
+
+    case VTKIS_DOLLY:
+      this->EndDolly();
+      break;
+  }
+}
 
 //----------------------------------------------------------------------------
 void vtkF3DInteractorStyle::OnDropFiles(vtkStringArray* files)
@@ -54,31 +152,36 @@ void vtkF3DInteractorStyle::Rotate()
   double ryf = dy * delta_elevation * this->MotionFactor;
 
   vtkCamera* camera = ren->GetActiveCamera();
-  double dir[3];
-  camera->GetDirectionOfProjection(dir);
-  double* up = ren->GetUpVector();
-
-  double dot = vtkMath::Dot(dir, up);
-
-  bool canElevate = ren->GetUseTrackball() || std::abs(dot) < 0.99 || !std::signbit(dot * ryf);
-
-  camera->Azimuth(rxf);
-
-  if (canElevate)
-  {
-    camera->Elevation(ryf);
-  }
 
   if (!ren->GetUseTrackball())
   {
-    // orthogonalize up vector based on focal direction
-    vtkMath::MultiplyScalar(dir, dot);
-    vtkMath::Subtract(up, dir, dir);
-    vtkMath::Normalize(dir);
-    camera->SetViewUp(dir);
+    double up[3];
+    this->InterpolateTemporaryUp(0.1, ren->GetUpVector(), up);
+
+    // Rotate camera around the focal point about the environment's up vector
+    vtkNew<vtkTransform> Transform;
+    Transform->Identity();
+    const double* fp = camera->GetFocalPoint();
+    Transform->Translate(+fp[0], +fp[1], +fp[2]);
+    Transform->RotateWXYZ(rxf, ren->GetUpVector());
+    Transform->Translate(-fp[0], -fp[1], -fp[2]);
+    Transform->TransformPoint(camera->GetPosition(), camera->GetPosition());
+
+    camera->SetViewUp(up);
+
+    // Clamp parameter to `camera->Elevation()` to maintain -90 < elevation < +90
+    constexpr double maxAbsElevation = 90 - 1e-12;
+    const double elevation = vtkMath::DegreesFromRadians(
+      vtkMath::AngleBetweenVectors(ren->GetUpVector(), camera->GetDirectionOfProjection()) -
+      vtkMath::Pi() / 2);
+    camera->Elevation(std::clamp(ryf, -maxAbsElevation - elevation, +maxAbsElevation - elevation));
+
+    camera->OrthogonalizeViewUp();
   }
   else
   {
+    camera->Azimuth(rxf);
+    camera->Elevation(ryf);
     camera->OrthogonalizeViewUp();
   }
 
@@ -235,4 +338,43 @@ void vtkF3DInteractorStyle::FindPokedRenderer(int vtkNotUsed(x), int vtkNotUsed(
 {
   // No need for picking, F3D interaction are only with the first renderer
   this->SetCurrentRenderer(this->Interactor->GetRenderWindow()->GetRenderers()->GetFirstRenderer());
+}
+
+//------------------------------------------------------------------------------
+void vtkF3DInteractorStyle::ResetTemporaryUp()
+{
+  // Make sure this->CurrentRenderer is set
+  this->FindPokedRenderer(0, 0);
+
+  if (this->CurrentRenderer)
+  {
+    vtkF3DRenderer* ren = vtkF3DRenderer::SafeDownCast(this->CurrentRenderer);
+    SetTemporaryUp(ren->GetUpVector());
+  }
+}
+
+//------------------------------------------------------------------------------
+void vtkF3DInteractorStyle::SetTemporaryUp(const double* tempUp)
+{
+  for (int i = 0; i < 3; i++)
+  {
+    this->TemporaryUp[i] = tempUp[i];
+  }
+  this->TemporaryUpFactor = 1.0;
+}
+
+//------------------------------------------------------------------------------
+void vtkF3DInteractorStyle::InterpolateTemporaryUp(
+  const double factorDelta, const double* target, double* output)
+{
+  this->TemporaryUpFactor = std::max(this->TemporaryUpFactor - factorDelta, 0.0);
+  if (this->TemporaryUpFactor >= 0)
+  {
+    const double factor = (1.0 - std::cos(vtkMath::Pi() * this->TemporaryUpFactor)) * 0.5;
+    for (int i = 0; i < 3; i++)
+    {
+      output[i] = factor * this->TemporaryUp[i] + (1.0 - factor) * target[i];
+    }
+    vtkMath::Normalize(output);
+  }
 }

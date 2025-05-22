@@ -6,16 +6,16 @@
 #ifndef vtkF3DMetaImporter_h
 #define vtkF3DMetaImporter_h
 
-#include "vtkF3DImporter.h"
 #include "F3DColoringInfoHandler.h"
+#include "vtkF3DImporter.h"
 
 #include <vtkActor.h>
-#include <vtkVolume.h>
-#include <vtkSmartVolumeMapper.h>
+#include <vtkBoundingBox.h>
 #include <vtkPointGaussianMapper.h>
 #include <vtkProperty.h>
-#include <vtkBoundingBox.h>
+#include <vtkSmartVolumeMapper.h>
 #include <vtkVersion.h>
+#include <vtkVolume.h>
 
 #if VTK_VERSION_NUMBER < VTK_VERSION_CHECK(9, 3, 20240707)
 #include <vtkActorCollection.h>
@@ -49,13 +49,18 @@ public:
 
   struct PointSpritesStruct
   {
-    PointSpritesStruct()
+    explicit PointSpritesStruct(vtkActor* originalActor, vtkImporter* importer)
+      : OriginalActor(originalActor)
+      , Importer(importer)
     {
+      this->Actor->vtkProp3D::ShallowCopy(originalActor);
       this->Actor->SetMapper(this->Mapper);
     }
 
     vtkNew<vtkActor> Actor;
     vtkNew<vtkPointGaussianMapper> Mapper;
+    vtkActor* OriginalActor;
+    vtkImporter* Importer;
   };
 
   struct ColoringStruct
@@ -66,7 +71,9 @@ public:
       this->Actor->GetProperty()->SetPointSize(10.0);
       this->Actor->GetProperty()->SetLineWidth(1.0);
       this->Actor->GetProperty()->SetRoughness(0.3);
+      this->Actor->GetProperty()->SetBaseIOR(1.5);
       this->Actor->GetProperty()->SetInterpolationToPBR();
+      this->Actor->vtkProp3D::ShallowCopy(originalActor);
       this->Actor->SetMapper(this->Mapper);
       this->Mapper->InterpolateScalarsBeforeMappingOn();
     }
@@ -97,7 +104,6 @@ public:
    */
   std::string GetMetaDataDescription() const;
 
-
   F3DColoringInfoHandler& GetColoringInfoHandler();
 
   ///@{
@@ -126,22 +132,23 @@ public:
 
   ///@{
   /**
-   * Implement vtkImporter animation API by adding animations for each individual importers one after the other
-   * No input checking on animationIndex
+   * Implement vtkImporter animation API by adding animations for each individual importers one
+   * after the other No input checking on animationIndex
    */
   vtkIdType GetNumberOfAnimations() override;
   std::string GetAnimationName(vtkIdType animationIndex) override;
   void EnableAnimation(vtkIdType animationIndex) override;
   void DisableAnimation(vtkIdType animationIndex) override;
   bool IsAnimationEnabled(vtkIdType animationIndex) override;
-  bool GetTemporalInformation(vtkIdType animationIndex, double frameRate, int& nbTimeSteps, double timeRange[2], vtkDoubleArray* timeSteps) override;
+  bool GetTemporalInformation(vtkIdType animationIndex, double frameRate, int& nbTimeSteps,
+    double timeRange[2], vtkDoubleArray* timeSteps) override;
   ///@}
 
   ///@{
   /**
-   * Implement vtkImporter camera API by adding cameras for each individual importers one after the other
-   * No input checking on camIndex
-   * Please note `void SetCamera(vtkIdType camIndex);` is not reimplemented nor used.
+   * Implement vtkImporter camera API by adding cameras for each individual importers one after the
+   * other No input checking on camIndex. Please note `void SetCamera(vtkIdType camIndex);` is not
+   * reimplemented nor used.
    */
   vtkIdType GetNumberOfCameras() override;
   std::string GetCameraName(vtkIdType camIndex) override;
@@ -152,6 +159,11 @@ public:
    * Update each individual importer at the provided value
    */
   bool UpdateAtTimeValue(double timeValue) override;
+
+  /**
+   * Get the update mTime
+   */
+  vtkMTimeType GetUpdateMTime();
 
 protected:
   vtkF3DMetaImporter();

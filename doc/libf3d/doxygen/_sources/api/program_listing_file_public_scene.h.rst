@@ -29,7 +29,7 @@ Program Listing for File scene.h
      struct load_failure_exception : public exception
      {
        explicit load_failure_exception(const std::string& what = "")
-         : exception(what){};
+         : exception(what) {};
      };
    
    
@@ -51,7 +51,11 @@ Program Listing for File scene.h
    
      virtual scene& clear() = 0;
    
-     virtual bool supports(const std::filesystem::path& filePath) = 0;
+     [[nodiscard]] virtual bool supports(const std::filesystem::path& filePath) = 0;
+   
+     virtual scene& loadAnimationTime(double timeValue) = 0;
+   
+     [[nodiscard]] virtual std::pair<double, double> animationTimeRange() = 0;
    
    protected:
      scene() = default;

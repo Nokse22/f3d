@@ -46,7 +46,13 @@ Included By
 
 - :ref:`file_public_image.h`
 
+- :ref:`file_public_interactor.h`
+
 - :ref:`file_public_scene.h`
+
+- :ref:`file_public_types.h`
+
+- :ref:`file_public_utils.h`
 
 
 

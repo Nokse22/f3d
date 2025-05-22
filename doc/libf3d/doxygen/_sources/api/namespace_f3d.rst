@@ -23,6 +23,8 @@ Classes
 
 - :ref:`exhale_struct_structf3d_1_1context_1_1symbol__exception`
 
+- :ref:`exhale_struct_structf3d_1_1engine_1_1cache__exception`
+
 - :ref:`exhale_struct_structf3d_1_1engine_1_1libInformation`
 
 - :ref:`exhale_struct_structf3d_1_1engine_1_1no__interactor__exception`
@@ -39,17 +41,43 @@ Classes
 
 - :ref:`exhale_struct_structf3d_1_1image_1_1write__exception`
 
+- :ref:`exhale_struct_structf3d_1_1interaction__bind__t`
+
+- :ref:`exhale_struct_structf3d_1_1interactor_1_1already__exists__exception`
+
+- :ref:`exhale_struct_structf3d_1_1interactor_1_1command__runtime__exception`
+
+- :ref:`exhale_struct_structf3d_1_1interactor_1_1does__not__exists__exception`
+
+- :ref:`exhale_struct_structf3d_1_1interactor_1_1invalid__args__exception`
+
 - :ref:`exhale_struct_structf3d_1_1mesh__t`
 
 - :ref:`exhale_struct_structf3d_1_1point3__t`
 
 - :ref:`exhale_struct_structf3d_1_1scene_1_1load__failure__exception`
 
+- :ref:`exhale_struct_structf3d_1_1type__access__exception`
+
+- :ref:`exhale_struct_structf3d_1_1type__construction__exception`
+
+- :ref:`exhale_struct_structf3d_1_1utils_1_1string__template_1_1lookup__error`
+
+- :ref:`exhale_struct_structf3d_1_1utils_1_1tokenize__exception`
+
 - :ref:`exhale_struct_structf3d_1_1vector3__t`
 
 - :ref:`exhale_class_classf3d_1_1camera`
 
+- :ref:`exhale_class_classf3d_1_1color__t`
+
+- :ref:`exhale_class_classf3d_1_1colormap__t`
+
 - :ref:`exhale_class_classf3d_1_1context`
+
+- :ref:`exhale_class_classf3d_1_1direction__t`
+
+- :ref:`exhale_class_classf3d_1_1double__array__t`
 
 - :ref:`exhale_class_classf3d_1_1engine`
 
@@ -66,6 +94,8 @@ Classes
 - :ref:`exhale_class_classf3d_1_1scene`
 
 - :ref:`exhale_class_classf3d_1_1utils`
+
+- :ref:`exhale_class_classf3d_1_1utils_1_1string__template`
 
 - :ref:`exhale_class_classf3d_1_1window`
 

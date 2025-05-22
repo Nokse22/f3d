@@ -8,16 +8,14 @@ set(test_sources
   TestF3DOpenGLGridMapper.cxx
   TestF3DRenderPass.cxx
   TestF3DRendererWithColoring.cxx
+  TestF3DFpsCounter.cxx
   )
-
-if(WIN32 AND F3D_WINDOWS_GUI)
-  list(APPEND test_sources TestF3DWinGuiObjectFactory.cxx)
-endif()
 
 if(F3D_MODULE_EXR)
   list(APPEND test_sources
        TestF3DEXRReader.cxx
-       TestF3DEXRReaderInvalid.cxx)
+       TestF3DEXRReaderInvalid.cxx
+       TestF3DEXRMemReader.cxx)
 endif()
 
 vtk_add_test_cxx(vtkextPrivateTests tests
@@ -37,7 +35,11 @@ set_tests_properties(f3d::vtkextPrivateCxx-TestF3DGenericImporter
   FAIL_REGULAR_EXPRESSION "")
 
 if(F3D_MODULE_EXR)
-  set_tests_properties(f3d::vtkextPrivateCxx-TestF3DEXRReaderInvalid
+  set_tests_properties(f3d::vtkextPrivateCxx-TestF3DEXRReaderInvalid f3d::vtkextPrivateCxx-TestF3DEXRMemReader
     PROPERTIES
     FAIL_REGULAR_EXPRESSION "")
 endif()
+
+if (F3D_MODULE_UI)
+  target_compile_definitions(vtkextPrivateTests PRIVATE F3D_MODULE_UI)
+endif ()
